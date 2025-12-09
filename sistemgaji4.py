@@ -104,10 +104,6 @@ def bendahara_login_form():
             # st.experimental_rerun()  <-- hapus saja
         else:
             st.error("Email atau password bendahara salah.")
-    elif menu == "Bendahara":
-    if "bendahara" not in st.session_state or not st.session_state["bendahara"]:
-        bendahara_login_form()
-        st.stop()  # hentikan eksekusi sampai login berhasil
 
 
 def karyawan_register():
