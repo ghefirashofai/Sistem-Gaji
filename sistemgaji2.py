@@ -152,7 +152,7 @@ if menu == "Beranda":
     cur_ym = today.strftime("%Y-%m")
     total_payroll = 0
     for name in db["karyawan"].keys():
-        s, _ = calc_month_salary := None, None  # placeholder to satisfy editors; we will compute below
+        #s, _ = calc_month_salary := None, None  # placeholder to satisfy editors; we will compute below
 
     # compute payroll for current month
     total_payroll = sum(calc_month_salary(name, cur_ym)[0] for name in db["karyawan"].keys())
