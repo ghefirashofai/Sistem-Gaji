@@ -92,18 +92,23 @@ BEND_EMAIL = "bendahara@email.com"
 BEND_PW = "12345"
 
 def bendahara_login_form():
-    with st.form("login_form"):
-        st.subheader("Login Bendahara")
-        email = st.text_input("Email")
-        pw = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login Bendahara")
+    st.subheader("Login Bendahara")
+    email = st.text_input("Email", key="bend_email")
+    pw = st.text_input("Password", type="password", key="bend_pw")
+    login_clicked = st.button("Login Bendahara")
 
-        if submitted:
-            if email.strip().lower() == BEND_EMAIL and pw == BEND_PW:
-                st.session_state["bendahara"] = True
-                st.success("Login berhasil (bendahara).")
-            else:
-                st.error("Email atau password bendahara salah.")
+    if login_clicked:
+        if email.strip().lower() == BEND_EMAIL and pw == BEND_PW:
+            st.session_state["bendahara"] = True
+            st.success("Login berhasil (bendahara).")
+            # st.experimental_rerun()  <-- hapus saja
+        else:
+            st.error("Email atau password bendahara salah.")
+    elif menu == "Bendahara":
+    if "bendahara" not in st.session_state or not st.session_state["bendahara"]:
+        bendahara_login_form()
+        st.stop()  # hentikan eksekusi sampai login berhasil
+
 
 def karyawan_register():
     st.subheader("Daftar Karyawan")
