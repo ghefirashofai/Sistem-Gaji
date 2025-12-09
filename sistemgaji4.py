@@ -148,6 +148,7 @@ menu = st.radio("Menu Utama:", ["Beranda","Bendahara","Karyawan","Keluar"], hori
 st.markdown(f"**Total karyawan:** {len(db['karyawan'])}")
 st.markdown("---")
 
+
 # ---------------------
 # BERANDA
 # ---------------------
@@ -166,14 +167,11 @@ if menu == "Beranda":
     st.markdown("---")
     st.write("Gunakan menu **Bendahara** untuk analisa & input pemasukan. Gunakan menu **Karyawan** untuk absen & cek gaji.")
 
-# ---------------------
-# BENDARAHA
-# ---------------------
+# --------------------- BENDARAHA ---------------------
 elif menu == "Bendahara":
     if "bendahara" not in st.session_state or not st.session_state["bendahara"]:
         bendahara_login_form()
-        st.stop()  # hentikan eksekusi sampai login berhasil
-
+        st.stop()
 
     st.success("Akses Bendahara aktif.")
     action = st.selectbox("Pilih Aksi", [
@@ -231,12 +229,71 @@ elif menu == "Bendahara":
         df = pd.DataFrame(rows)
         st.dataframe(df)
 
+    # ----------------- Edit Karyawan -----------------
+    elif action == "Edit Karyawan":
+        st.subheader("✏️ Edit Data Karyawan")
+        all_names = list(db["karyawan"].keys())
+        if not all_names:
+            st.info("Belum ada karyawan.")
+        else:
+            pilih = st.selectbox("Pilih karyawan", all_names)
+            info = db["karyawan"][pilih]
+
+            new_pw = st.text_input("Password baru (opsional)", value=info["password"])
+            new_pos = st.selectbox("Posisi", ["intern","staff","spv","manager"], index=["intern","staff","spv","manager"].index(info["posisi"]))
+
+            if st.button("Simpan Perubahan"):
+                db["karyawan"][pilih]["password"] = new_pw
+                db["karyawan"][pilih]["posisi"] = new_pos
+                save_db(db)
+                st.success("Data karyawan berhasil diperbarui.")
+
+    # ----------------- Hapus Karyawan -----------------
+    elif action == "Hapus Karyawan":
+        st.subheader("🗑️ Hapus Karyawan")
+        names = list(db["karyawan"].keys())
+        if not names:
+            st.info("Tidak ada karyawan untuk dihapus.")
+        else:
+            pilih = st.selectbox("Pilih karyawan", names)
+            if st.button("Hapus"):
+                del db["karyawan"][pilih]
+                save_db(db)
+                st.success(f"Karyawan '{pilih}' berhasil dihapus.")
+
+    # ----------------- Input Pemasukan Bulanan -----------------
+    elif action == "Input Pemasukan Bulanan":
+        st.subheader("💰 Input Pemasukan Bulanan")
+        bulan = st.date_input("Pilih bulan", value=date.today())
+        ym_str = bulan.strftime("%Y-%m")
+        val = st.number_input("Jumlah pemasukan bulan ini", min_value=0, step=10000)
+        if st.button("Simpan Pemasukan"):
+            db["pemasukan"][ym_str] = int(val)
+            save_db(db)
+            st.success(f"Pemasukan untuk {ym_str} tersimpan.")
+
+    # ----------------- Edit Tarif Gaji per Posisi -----------------
+    elif action == "Edit Tarif Gaji per Posisi":
+        st.subheader("💵 Edit Tarif Gaji")
+        st.write("Tarif saat ini:", db["rates"])
+
+        posisi = st.selectbox("Posisi", ["intern","staff","spv","manager"])
+        normal = st.number_input("Tarif Normal (per jam)", min_value=0, step=5000,
+                                  value=db["rates"]["normal"][posisi])
+        overtime = st.number_input("Tarif Lembur (per jam)", min_value=0, step=5000,
+                                   value=db["rates"]["overtime"][posisi])
+
+        if st.button("Simpan Tarif"):
+            db["rates"]["normal"][posisi] = int(normal)
+            db["rates"]["overtime"][posisi] = int(overtime)
+            save_db(db)
+            st.success("Tarif berhasil diperbarui.")
+
     # ----------------- Logout Bendahara -----------------
     elif action == "Logout Bendahara":
         st.session_state.pop("bendahara", None)
         st.success("Logout berhasil.")
         st.experimental_rerun()
-
 
 # ---------------------
 # KARYAWAN
