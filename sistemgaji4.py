@@ -132,14 +132,16 @@ def karyawan_login():
     st.subheader("Login Karyawan")
     nama = st.text_input("Nama", key="login_nama")
     pw = st.text_input("Password", type="password", key="login_pw")
+
     if st.button("Login Karyawan"):
         key = nama.strip().lower()
         if key in db["karyawan"] and db["karyawan"][key].get("password") == pw:
             st.session_state["karyawan"] = key
             st.success(f"Login berhasil: {key.title()}")
-            st.experimental_rerun()
+            # Hapus st.experimental_rerun() untuk menghindari error
         else:
             st.error("Nama atau password salah.")
+
 
 # ---------------------
 # UI: Top navigation
