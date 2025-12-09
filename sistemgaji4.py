@@ -142,15 +142,18 @@ def karyawan_login():
             st.error("Nama atau password salah.")
 
 # ---------------------
-# UI: Sidebar navigation
+# UI: Top navigation
 # ---------------------
 st.set_page_config(page_title="Sistem Gaji (HR)", layout="wide")
 st.title("💼 Sistem Gaji & Absensi — Dashboard")
 
-menu = st.sidebar.selectbox("Menu Utama", ["Beranda","Bendahara","Karyawan","Keluar"])
-st.sidebar.markdown("---")
-# quick info
-st.sidebar.write(f"Total karyawan: {len(db['karyawan'])}")
+# Top menu
+menu = st.radio("Menu Utama:", ["Beranda","Bendahara","Karyawan","Keluar"], horizontal=True)
+
+# Quick info (bisa tetap di sidebar atau di atas)
+st.markdown(f"**Total karyawan:** {len(db['karyawan'])}")
+st.markdown("---")
+
 
 # ---------------------
 # BERANDA
