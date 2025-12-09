@@ -10,8 +10,7 @@ Original file is located at
 
 
 # -*- coding: utf-8 -*-
-"""Sistem Gaji & Absensi — Streamlit App"""
-
+# app.py
 import streamlit as st
 import json, os
 import pandas as pd
@@ -22,18 +21,17 @@ from calendar import monthrange
 # ---------------------
 # Config / DB filename
 # ---------------------
-DB_FILE = "databaseghe3.json"
+DB_FILE = "database.json"
 
 # ---------------------
 # Utility: load/save DB
 # ---------------------
 def load_db():
     if not os.path.exists(DB_FILE):
-        # default structure
         return {
-            "karyawan": {},    
-            "pemasukan": {},   
-            "rates": {         
+            "karyawan": {},  # name -> {password, posisi, absen: { 'YYYY-MM-DD': {status, overtime}}}
+            "pemasukan": {},  # 'YYYY-MM' -> int
+            "rates": {        # default rates
                 "normal": {"intern":35000,"staff":50000,"spv":100000,"manager":200000},
                 "overtime": {"intern":20000,"staff":40000,"spv":55000,"manager":65000}
             }
@@ -53,27 +51,26 @@ db = load_db()
 def calc_month_salary(name, ym):  # ym = 'YYYY-MM'
     if name not in db["karyawan"]:
         return 0, []
-    
     pos = db["karyawan"][name]["posisi"]
     normal_rate = db["rates"]["normal"].get(pos, 0)
     ot_rate = db["rates"]["overtime"].get(pos, 0)
     total = 0
     rows = []
-
     absen = db["karyawan"][name].get("absen", {})
     for dstr, info in absen.items():
         if dstr.startswith(ym):
-            status = info.get("status", "")
-            overtime = int(info.get("overtime", 0))
+            status = info.get("status","")
+            overtime = int(info.get("overtime",0))
             if status == "hadir":
                 amt = 8 * normal_rate
                 total += amt
+                rows.append({"date": dstr, "status": status, "overtime": 0, "amount": amt})
             elif status == "hadir+lembur":
                 amt = 8 * normal_rate + overtime * ot_rate
                 total += amt
+                rows.append({"date": dstr, "status": status, "overtime": overtime, "amount": amt})
             else:
-                amt = 0
-            rows.append({"date": dstr, "status": status, "overtime": overtime if status=="hadir+lembur" else 0, "amount": amt})
+                rows.append({"date": dstr, "status": status, "overtime": 0, "amount": 0})
     return int(total), rows
 
 # ---------------------
@@ -86,84 +83,85 @@ def rp(x):
         return f"Rp {x}"
 
 # ---------------------
-# Auth (Bendahara & Karyawan)
+# Auth Bendahara
 # ---------------------
 BEND_EMAIL = "bendahara@email.com"
 BEND_PW = "12345"
 
 def bendahara_login_form():
-    st.subheader("Login Bendahara")
-    email = st.text_input("Email", key="bend_email")
-    pw = st.text_input("Password", type="password", key="bend_pw")
-    login_clicked = st.button("Login Bendahara")
+    with st.form("bendahara_login"):
+        st.subheader("Login Bendahara")
+        email = st.text_input("Email")
+        pw = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login Bendahara")
 
-    if login_clicked:
-        if email.strip().lower() == BEND_EMAIL and pw == BEND_PW:
-            st.session_state["bendahara"] = True
-            st.success("Login berhasil (bendahara).")
-            # st.experimental_rerun()  <-- hapus saja
-        else:
-            st.error("Email atau password bendahara salah.")
+        if submitted:
+            if email.strip().lower() == BEND_EMAIL and pw == BEND_PW:
+                st.session_state["bendahara"] = True
+                st.success("Login berhasil (bendahara).")
+            else:
+                st.error("Email atau password bendahara salah.")
 
-
+# ---------------------
+# Auth Karyawan
+# ---------------------
 def karyawan_register():
     st.subheader("Daftar Karyawan")
-    col1, col2 = st.columns(2)
-    with col1:
-        nama = st.text_input("Nama (unique)", key="reg_nama")
-    with col2:
-        pw = st.text_input("Password", type="password", key="reg_pw")
-    posisi = st.selectbox("Posisi", ["intern","staff","spv","manager"], key="reg_pos")
-    if st.button("Daftar"):
-        if not nama or not pw:
-            st.warning("Isi nama dan password.")
-        else:
-            key = nama.strip().lower()
-            if key in db["karyawan"]:
-                st.error("Nama sudah terdaftar, gunakan nama lain atau login.")
+    with st.form("reg_form"):
+        nama = st.text_input("Nama (unique)").strip().lower()
+        pw = st.text_input("Password", type="password")
+        posisi = st.selectbox("Posisi", ["intern","staff","spv","manager"])
+        submitted = st.form_submit_button("Daftar")
+
+        if submitted:
+            if not nama or not pw:
+                st.warning("Isi nama dan password.")
+            elif nama in db["karyawan"]:
+                st.error("Nama sudah terdaftar.")
             else:
-                db["karyawan"][key] = {"password": pw, "posisi": posisi, "absen": {}}
+                db["karyawan"][nama] = {"password": pw, "posisi": posisi, "absen": {}}
                 save_db(db)
                 st.success("Pendaftaran berhasil. Silakan login di panel Karyawan.")
 
 def karyawan_login():
     st.subheader("Login Karyawan")
-    nama = st.text_input("Nama", key="login_nama")
-    pw = st.text_input("Password", type="password", key="login_pw")
-    if st.button("Login Karyawan"):
-        key = nama.strip().lower()
-        if key in db["karyawan"] and db["karyawan"][key].get("password") == pw:
-            st.session_state["karyawan"] = key
-            st.success(f"Login berhasil: {key.title()}")
-        else:
-            st.error("Nama atau password salah.")
+    with st.form("login_form"):
+        nama = st.text_input("Nama").strip().lower()
+        pw = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login Karyawan")
+
+        if submitted:
+            if nama in db["karyawan"] and db["karyawan"][nama].get("password") == pw:
+                st.session_state["karyawan"] = nama
+                st.success(f"Login berhasil: {nama.title()}")
+            else:
+                st.error("Nama atau password salah.")
 
 # ---------------------
-# UI: Top navigation
+# UI
 # ---------------------
 st.set_page_config(page_title="Sistem Gaji (HR)", layout="wide")
 st.title("💼 Sistem Gaji & Absensi — Dashboard")
 
 menu = st.radio("Menu Utama:", ["Beranda","Bendahara","Karyawan","Keluar"], horizontal=True)
+
 st.markdown(f"**Total karyawan:** {len(db['karyawan'])}")
 st.markdown("---")
 
-
-# ---------------------
-# BERANDA
-# ---------------------
+# --------------------- BERANDA ---------------------
 if menu == "Beranda":
     st.header("Ringkasan Singkat")
     today = date.today()
     cur_ym = today.strftime("%Y-%m")
-    total_k = len(db["karyawan"])
+
     total_payroll = sum(calc_month_salary(name, cur_ym)[0] for name in db["karyawan"].keys())
     total_pemasukan = db.get("pemasukan", {}).get(cur_ym, 0)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Jumlah Karyawan", total_k)
+    col1.metric("Jumlah Karyawan", len(db["karyawan"]))
     col2.metric("Total Payroll (Bulan ini)", rp(total_payroll))
     col3.metric("Pemasukan (Bulan ini)", rp(total_pemasukan))
+
     st.markdown("---")
     st.write("Gunakan menu **Bendahara** untuk analisa & input pemasukan. Gunakan menu **Karyawan** untuk absen & cek gaji.")
 
@@ -229,78 +227,14 @@ elif menu == "Bendahara":
         df = pd.DataFrame(rows)
         st.dataframe(df)
 
-    # ----------------- Edit Karyawan -----------------
-    elif action == "Edit Karyawan":
-        st.subheader("✏️ Edit Data Karyawan")
-        all_names = list(db["karyawan"].keys())
-        if not all_names:
-            st.info("Belum ada karyawan.")
-        else:
-            pilih = st.selectbox("Pilih karyawan", all_names)
-            info = db["karyawan"][pilih]
-
-            new_pw = st.text_input("Password baru (opsional)", value=info["password"])
-            new_pos = st.selectbox("Posisi", ["intern","staff","spv","manager"], index=["intern","staff","spv","manager"].index(info["posisi"]))
-
-            if st.button("Simpan Perubahan"):
-                db["karyawan"][pilih]["password"] = new_pw
-                db["karyawan"][pilih]["posisi"] = new_pos
-                save_db(db)
-                st.success("Data karyawan berhasil diperbarui.")
-
-    # ----------------- Hapus Karyawan -----------------
-    elif action == "Hapus Karyawan":
-        st.subheader("🗑️ Hapus Karyawan")
-        names = list(db["karyawan"].keys())
-        if not names:
-            st.info("Tidak ada karyawan untuk dihapus.")
-        else:
-            pilih = st.selectbox("Pilih karyawan", names)
-            if st.button("Hapus"):
-                del db["karyawan"][pilih]
-                save_db(db)
-                st.success(f"Karyawan '{pilih}' berhasil dihapus.")
-
-    # ----------------- Input Pemasukan Bulanan -----------------
-    elif action == "Input Pemasukan Bulanan":
-        st.subheader("💰 Input Pemasukan Bulanan")
-        bulan = st.date_input("Pilih bulan", value=date.today())
-        ym_str = bulan.strftime("%Y-%m")
-        val = st.number_input("Jumlah pemasukan bulan ini", min_value=0, step=10000)
-        if st.button("Simpan Pemasukan"):
-            db["pemasukan"][ym_str] = int(val)
-            save_db(db)
-            st.success(f"Pemasukan untuk {ym_str} tersimpan.")
-
-    # ----------------- Edit Tarif Gaji per Posisi -----------------
-    elif action == "Edit Tarif Gaji per Posisi":
-        st.subheader("💵 Edit Tarif Gaji")
-        st.write("Tarif saat ini:", db["rates"])
-
-        posisi = st.selectbox("Posisi", ["intern","staff","spv","manager"])
-        normal = st.number_input("Tarif Normal (per jam)", min_value=0, step=5000,
-                                  value=db["rates"]["normal"][posisi])
-        overtime = st.number_input("Tarif Lembur (per jam)", min_value=0, step=5000,
-                                   value=db["rates"]["overtime"][posisi])
-
-        if st.button("Simpan Tarif"):
-            db["rates"]["normal"][posisi] = int(normal)
-            db["rates"]["overtime"][posisi] = int(overtime)
-            save_db(db)
-            st.success("Tarif berhasil diperbarui.")
-
     # ----------------- Logout Bendahara -----------------
     elif action == "Logout Bendahara":
         st.session_state.pop("bendahara", None)
         st.success("Logout berhasil.")
         st.experimental_rerun()
 
-# ---------------------
-# KARYAWAN
-# ---------------------
+# --------------------- KARYAWAN ---------------------
 elif menu == "Karyawan":
-    st.header("👤 Panel Karyawan")
-
     if "karyawan" not in st.session_state:
         tab1, tab2 = st.tabs(["Login", "Daftar"])
         with tab1:
@@ -311,6 +245,7 @@ elif menu == "Karyawan":
 
     nama = st.session_state["karyawan"]
     st.success(f"Login sebagai {nama.title()}")
+
     aksi = st.selectbox("Pilih Aksi", ["Absen Hari Ini", "Lihat Gaji Bulanan", "Riwayat Absensi", "Logout"])
 
     # Absen Hari Ini
@@ -318,8 +253,9 @@ elif menu == "Karyawan":
         st.subheader("📅 Absen Hari Ini")
         today = date.today().strftime("%Y-%m-%d")
         status = st.selectbox("Status", ["hadir", "hadir+lembur", "izin", "sakit", "cuti"])
-        overtime = st.number_input("Jumlah jam lembur", min_value=1, max_value=12) if status=="hadir+lembur" else 0
-
+        overtime = 0
+        if status == "hadir+lembur":
+            overtime = st.number_input("Jumlah jam lembur", min_value=1, max_value=12)
         if st.button("Simpan Absen"):
             if "absen" not in db["karyawan"][nama]:
                 db["karyawan"][nama]["absen"] = {}
@@ -345,28 +281,19 @@ elif menu == "Karyawan":
     elif aksi == "Riwayat Absensi":
         st.subheader("📂 Riwayat Absensi")
         absen = db["karyawan"][nama].get("absen", {})
-        if absen:
-            df = pd.DataFrame([{"Tanggal": d, "Status": info.get("status"), "Lembur": info.get("overtime", 0)} for d, info in absen.items()])
-            st.dataframe(df.sort_values("Tanggal"))
-        else:
+        if not absen:
             st.info("Belum ada data absensi.")
+        else:
+            rows = [{"Tanggal": d, "Status": v["status"], "Lembur": v.get("overtime",0)} for d,v in absen.items()]
+            df = pd.DataFrame(rows).sort_values("Tanggal")
+            st.dataframe(df)
 
-    # Logout Karyawan
+    # Logout
     elif aksi == "Logout":
         st.session_state.pop("karyawan", None)
         st.success("Logout berhasil.")
         st.experimental_rerun()
 
-# ---------------------
-# KELUAR
-# ---------------------
+# --------------------- Keluar ---------------------
 elif menu == "Keluar":
     st.write("Terima kasih telah menggunakan sistem.")
-
-
-
-# ---------------------
-# Keluar
-# ---------------------
-elif menu == "Keluar":
-    st.write("Terima kasih — tutup tab browser untuk keluar.")
