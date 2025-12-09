@@ -395,32 +395,6 @@ elif menu == "Karyawan":
 
     aksi = st.selectbox("Pilih Aksi", ["Absen Hari Ini", "Lihat Gaji Bulanan", "Riwayat Absensi", "Logout"])
 
-    # ------ Absen Hari Ini ------
-    if aksi == "Absen Hari Ini":
-        st.subheader("📅 Absen Hari Ini")
-        today = date.today().strftime("%Y-%m-%d")
-        status = st.selectbox("Status", ["hadir", "hadir+lembur", "izin", "sakit", "cuti"])
-        overtime = 0
-        if status == "hadir+lembur":
-            overtime = st.number_input("Jumlah jam lembur", min_value=1, max_value=12)
-        if st.button("Simpan Absen"):
-            if nama not in db["karyawan"]:
-                st.error("Nama karyawan tidak ditemukan di database.")
-            else:
-                if "absen" not in db["karyawan"][nama]:
-                    db["karyawan"][nama]["absen"] = {}
-                db["karyawan"][nama]["absen"][today] = {
-                    "status": status,
-                    "overtime": overtime
-                }
-                save_db(db)
-                st.success("Absensi tersimpan.")
-
-    # ------ Lihat Gaji Bulanan ------
-    elif aksi == "Lihat Gaji Bulanan":
-        ...
-
-
 # ------ Absen Hari Ini ------
 if aksi == "Absen Hari Ini":
     st.subheader("📅 Absen Hari Ini")
