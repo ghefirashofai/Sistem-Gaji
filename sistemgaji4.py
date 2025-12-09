@@ -170,10 +170,10 @@ if menu == "Beranda":
 # BENDARAHA
 # ---------------------
 elif menu == "Bendahara":
-    st.header("🔐 Bendahara — Admin Panel")
     if "bendahara" not in st.session_state or not st.session_state["bendahara"]:
         bendahara_login_form()
-        st.stop()
+        st.stop()  # hentikan eksekusi sampai login berhasil
+
 
     st.success("Akses Bendahara aktif.")
     action = st.selectbox("Pilih Aksi", [
