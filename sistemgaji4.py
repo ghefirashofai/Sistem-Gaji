@@ -187,8 +187,56 @@ elif menu == "Bendahara":
         "Logout Bendahara"
     ])
 
-    # ... semua aksi Bendahara seperti sebelumnya (Dashboard, Input, Edit, Hapus, dsb) ...
-    # kode ini sama seperti versi sebelumnya, cukup dipastikan masuk ke masing-masing elif action == ...
+    # ----------------- Dashboard Evaluasi Bulanan -----------------
+    if action == "Dashboard Evaluasi Bulanan":
+        st.subheader("📊 Dashboard Evaluasi Bulanan")
+        ym = st.date_input("Pilih bulan", value=date.today())
+        ym_str = ym.strftime("%Y-%m")
+        st.write(f"Menampilkan data untuk: **{ym_str}**")
+        rows = []
+        for name in db["karyawan"].keys():
+            total, _ = calc_month_salary(name, ym_str)
+            rows.append({"Nama": name.title(), "Posisi": db["karyawan"][name]["posisi"], "Gaji": total})
+        df = pd.DataFrame(rows)
+        if not df.empty:
+            df["Gaji"] = df["Gaji"].map(lambda x: f"{x:,}")
+            st.dataframe(df)
+        else:
+            st.info("Belum ada data gaji untuk bulan ini.")
+
+    # ----------------- Input Data Karyawan -----------------
+    elif action == "Input Data Karyawan":
+        st.subheader("➕ Input Data Karyawan")
+        with st.form("input_karyawan"):
+            nama = st.text_input("Nama (unique)").strip().lower()
+            pw = st.text_input("Password (untuk karyawan)", type="password")
+            posisi = st.selectbox("Posisi", ["intern","staff","spv","manager"])
+            submitted = st.form_submit_button("Simpan")
+            if submitted:
+                if not nama or not pw:
+                    st.warning("Nama & password harus diisi.")
+                elif nama in db["karyawan"]:
+                    st.error("Nama sudah ada.")
+                else:
+                    db["karyawan"][nama] = {"password": pw, "posisi": posisi, "absen": {}}
+                    save_db(db)
+                    st.success("Karyawan tersimpan.")
+
+    # ----------------- Lihat Database -----------------
+    elif action == "Lihat Database":
+        st.subheader("📋 Lihat Database Karyawan")
+        rows = []
+        for name, info in db["karyawan"].items():
+            rows.append({"Nama": name.title(), "Posisi": info.get("posisi","")})
+        df = pd.DataFrame(rows)
+        st.dataframe(df)
+
+    # ----------------- Logout Bendahara -----------------
+    elif action == "Logout Bendahara":
+        st.session_state.pop("bendahara", None)
+        st.success("Logout berhasil.")
+        st.experimental_rerun()
+
 
 # ---------------------
 # KARYAWAN
