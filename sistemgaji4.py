@@ -62,11 +62,11 @@ def calc_month_salary(name, ym):  # ym = 'YYYY-MM'
             status = info.get("status","")
             overtime = int(info.get("overtime",0))
             if status == "hadir":
-                amt = 8 * normal_rate
+                amt = 7 * normal_rate
                 total += amt
                 rows.append({"date": dstr, "status": status, "overtime": 0, "amount": amt})
             elif status == "hadir+lembur":
-                amt = 8 * normal_rate + overtime * ot_rate
+                amt = 7 * normal_rate + overtime * ot_rate
                 total += amt
                 rows.append({"date": dstr, "status": status, "overtime": overtime, "amount": amt})
             else:
